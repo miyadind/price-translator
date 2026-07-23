@@ -35,7 +35,31 @@ jobs:
           gradle-version: '8.11.1'
 
       - name: Build debug APK
-        run: gradle assembleDebug --console=plain --quiet
+        id: build
+        shell: bash
+        run: |
+          set +e
+          gradle assembleDebug --console=plain > build.log 2>&1
+          code=$?
+          echo "$code" > build-exit-code.txt
+          exit 0
+
+      - name: Upload build diagnostics
+        uses: actions/upload-artifact@v4
+        with:
+          name: PriceTranslator-Build-Log
+          path: |
+            build.log
+            build-exit-code.txt
+
+      - name: Verify build result
+        shell: bash
+        run: |
+          code=$(cat build-exit-code.txt)
+          if [ "$code" != "0" ]; then
+            tail -n 120 build.log
+            exit "$code"
+          fi
 
       - name: Rename APK
         run: cp app/build/outputs/apk/debug/app-debug.apk PriceTranslator.apk
