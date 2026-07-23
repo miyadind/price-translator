@@ -14,7 +14,12 @@ import java.util.Locale
 import kotlin.math.max
 
 object PriceImageProcessor {
-    private val usdPattern = Regex("(?:\\$|USD\\s*)\\s*(\\d{1,6}(?:[.,]\\d{1,2})?)", RegexOption.IGNORE_CASE)
+    // Accept a whole OCR element containing a plain number, a dollar amount, or USD.
+    // Examples: 100, 55, 39.25, 39,25, $19.99, USD 19.99.
+    private val pricePattern = Regex(
+        "^(?:USD\\s*|\\$\\s*)?(\\d{1,6}(?:[.,]\\d{1,2})?)$",
+        RegexOption.IGNORE_CASE
+    )
 
     fun process(bitmap: Bitmap, rate: ExchangeRateRepository.Rate, onSuccess: (Bitmap, Int) -> Unit, onFailure: (Throwable) -> Unit) {
         val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
@@ -30,8 +35,10 @@ object PriceImageProcessor {
                     }
                     var count = 0
                     result.textBlocks.flatMap { it.lines }.flatMap { it.elements }.forEach { element ->
-                        val match = usdPattern.find(element.text) ?: return@forEach
+                        val cleanedText = element.text.trim().replace(" ", "")
+                        val match = pricePattern.matchEntire(cleanedText) ?: return@forEach
                         val amount = match.groupValues[1].replace(',', '.').toDoubleOrNull() ?: return@forEach
+                        if (amount <= 0.0) return@forEach
                         val box = element.boundingBox ?: return@forEach
                         val label = formatCurrency(amount * rate.value, rate.quote)
                         val padded = Rect(max(0, box.left - 6), max(0, box.top - 4), minOf(output.width, box.right + 6), minOf(output.height, box.bottom + 4))
