@@ -78,7 +78,7 @@ private fun PriceTranslatorApp() {
                         rate = activeRate
                         status = "Recognizing prices…"
                         PriceImageProcessor.process(bitmap, activeRate,
-                            onSuccess = { image, count -> processed = image; busy = false; status = if (count > 0) "$count price(s) replaced" else "No USD prices found" },
+                            onSuccess = { image, count -> processed = image; busy = false; status = if (count > 0) "$count price(s) replaced" else "No prices found" },
                             onFailure = { busy = false; status = it.message ?: "Recognition failed" })
                     }
                 }) { Text("Translate prices") }
